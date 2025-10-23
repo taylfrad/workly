@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>This app needs access to documents to upload and parse resumes.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs access to photos to upload resume files.</string>
 </dict>
 </plist>
