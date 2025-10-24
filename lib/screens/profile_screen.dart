@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:job_tinder/themes/app_theme.dart';
 
 import '../models/user_model.dart';
 import '../services/file_upload_service.dart';
+import '../services/user_storage_service.dart';
+import '../providers/auth_provider.dart';
+import 'auth_screen.dart';
 import 'job_swipe_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  final UserModel? user; // Can be null (creating) or provided (editing)
-  const ProfileScreen({super.key, this.user});
+  const ProfileScreen({super.key});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -30,13 +33,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   bool _isUploadingResume = false;
 
-  bool get _isEditing => widget.user != null;
-
   @override
   void initState() {
     super.initState();
-    // Use existing user data if editing, or create a new model if signing up
-    _user = widget.user ?? UserModel();
+    // Get user from AuthProvider
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    _user = authProvider.currentUser ?? UserModel();
+    
     _nameController = TextEditingController(text: _user.name);
     _emailController = TextEditingController(text: _user.email);
     _phoneController = TextEditingController(text: _user.phoneNumber);
@@ -45,6 +48,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _portfolioController = TextEditingController(text: _user.portfolioUrl);
     _githubController = TextEditingController(text: _user.githubUrl);
     _linkedinController = TextEditingController(text: _user.linkedinUrl);
+    
   }
 
   @override
@@ -101,7 +105,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         // Update user model with extracted data
         setState(() {
           _user.resumeFilePath = 'uploaded_resume_${DateTime.now().millisecondsSinceEpoch}';
-          _user.resumeFileName = 'resume_uploaded.${extractedData['fileExtension'] ?? 'docx'}';
+          _user.resumeFileName = extractedData['fileName'] ?? 'resume_uploaded.${extractedData['fileExtension'] ?? 'docx'}';
+          
           
           // Update fields with extracted data if they're empty
           if (_user.name.isEmpty && extractedData['name'].toString().isNotEmpty) {
@@ -193,7 +198,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _saveProfile() {
+  void _saveProfile() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
       
@@ -207,16 +212,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _user.githubUrl = _githubController.text;
       _user.linkedinUrl = _linkedinController.text;
       
-      if (_isEditing) {
-        // If editing, just pop the screen
-        Navigator.pop(context);
-      } else {
-        // If creating, push replacement to the swipe screen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => JobSwipeScreen(user: _user)),
-        );
-      }
+      
+      // Save profile data to local storage
+      await UserStorageService.saveUserProfile(_user);
+      
+      // Update the user in AuthProvider
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      authProvider.updateLocalUser(_user);
+      
+      // Navigate to job swipe screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const JobSwipeScreen()),
+      );
     }
   }
 
@@ -224,7 +232,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Profile' : 'Create Your Profile'),
+        title: Text(_user.isGuest ? 'Create Your Profile' : 'Complete Your Profile'),
+        actions: [
+          if (!_user.isGuest)
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: () async {
+                final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                await authProvider.signOut();
+                
+                // Navigate back to auth screen after sign out
+                if (mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const AuthScreen()),
+                    (route) => false,
+                  );
+                }
+              },
+              tooltip: 'Sign Out',
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
@@ -233,6 +260,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Guest user notice
+              if (_user.isGuest)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.blue.shade600),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Guest Mode',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue.shade800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Your progress won\'t be saved. Sign in with Google to save your profile and job preferences.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.blue.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Full Name'),
@@ -387,7 +454,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: _saveProfile,
-                child: Text(_isEditing ? 'Save Profile' : 'Start Swiping'),
+                child: Text(_user.phoneNumber.isNotEmpty && _user.location.isNotEmpty 
+                    ? 'Update Profile & Continue Swiping' 
+                    : (_user.isGuest ? 'Start Swiping as Guest' : 'Start Swiping')),
               ),
             ],
           ),

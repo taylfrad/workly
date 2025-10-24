@@ -1,4 +1,5 @@
 class UserModel {
+  String userId; // Unique identifier for the user
   String name;
   String email;
   String experience;
@@ -13,8 +14,12 @@ class UserModel {
   String portfolioUrl;
   String githubUrl;
   String linkedinUrl;
+  bool isGuest; // Whether this is a guest user
+  String? authProvider; // 'google', 'email', etc.
+  String? photoUrl; // Profile photo URL from Google
 
   UserModel({
+    this.userId = '',
     this.name = '',
     this.email = '',
     this.experience = 'Entry-Level',
@@ -29,6 +34,9 @@ class UserModel {
     this.portfolioUrl = '',
     this.githubUrl = '',
     this.linkedinUrl = '',
+    this.isGuest = false,
+    this.authProvider,
+    this.photoUrl,
   }) : skills = skills ?? <String>{},
        workExperience = workExperience ?? <String>[],
        education = education ?? <String>[]; // Fixed: Initializes a new mutable set

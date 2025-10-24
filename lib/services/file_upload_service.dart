@@ -76,11 +76,13 @@ class FileUploadService {
           // For web, parse the file bytes directly
           final result = await ResumeParser.parseResumeFromBytes(file.bytes!, file.name);
           result['fileExtension'] = file.extension;
+          result['fileName'] = file.name; // Add the actual filename
           return result;
         } else if (!kIsWeb && file.path != null) {
           // For mobile/desktop, use the file path
           final result = await ResumeParser.parseResume(file.path!);
           result['fileExtension'] = file.extension;
+          result['fileName'] = file.name; // Add the actual filename
           return result;
         }
       }

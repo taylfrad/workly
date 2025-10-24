@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:job_tinder/screens/saved_job_screen.dart';
 import 'package:job_tinder/themes/app_theme.dart';
 import 'dart:math';
 
 import '../models/job_model.dart';
-import '../models/user_model.dart';
 import '../data/mock_data.dart';
+import '../providers/auth_provider.dart';
+import '../services/saved_jobs_service.dart';
 import 'profile_screen.dart';
 import 'job_detail_screen.dart';
 import '../widgets/job_card.dart';
 
 class JobSwipeScreen extends StatefulWidget {
-  final UserModel user;
-  const JobSwipeScreen({super.key, required this.user});
+  const JobSwipeScreen({super.key});
 
   @override
   State<JobSwipeScreen> createState() => _JobSwipeScreenState();
@@ -34,15 +35,33 @@ class _JobSwipeScreenState extends State<JobSwipeScreen> {
   void initState() {
     super.initState();
     _availableJobs = List.from(mockJobs);
+    _loadSavedJobs(); // Load previously saved jobs
+  }
+  
+  // Load saved jobs from storage
+  Future<void> _loadSavedJobs() async {
+    final savedJobs = await SavedJobsService.loadSwipedJobs();
+    setState(() {
+      _savedJobs.addAll(savedJobs);
+    });
+  }
+  
+  // Save jobs to storage
+  Future<void> _saveJobs() async {
+    await SavedJobsService.saveSwipedJobs(_savedJobs);
   }
 
   int calculateMatchScore(JobModel job) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.currentUser;
+    if (user == null) return 0;
+    
     int score = 0;
-    int commonSkills = widget.user.skills.intersection(job.requiredSkills).length;
+    int commonSkills = user.skills.intersection(job.requiredSkills).length;
     if (job.requiredSkills.isNotEmpty) {
       score += (60 * (commonSkills / job.requiredSkills.length)).round();
     }
-    if (widget.user.experience == job.experienceLevel) score += 40;
+    if (user.experience == job.experienceLevel) score += 40;
     return min(100, score);
   }
 
@@ -101,6 +120,7 @@ class _JobSwipeScreenState extends State<JobSwipeScreen> {
     // Wait for animation to finish
     Future.delayed(_animationDuration, () {
       _savedJobs.add(_availableJobs[_cardIndex]);
+      _saveJobs(); // Save to storage
       _advanceCard(); // Move to next card
       
       // Show Notification
@@ -160,7 +180,7 @@ class _JobSwipeScreenState extends State<JobSwipeScreen> {
   void _goToProfile() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => ProfileScreen(user: widget.user))
+      MaterialPageRoute(builder: (context) => const ProfileScreen())
     ).then((_) {
       setState(() {}); 
     });
