@@ -47,7 +47,7 @@ app.*.map.json
 # Firebase configuration files (contain sensitive API keys)
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
-# lib/firebase_options.dart - Uncomment this line after setting up proper Firebase config
+lib/firebase_options.dart
 
 # Environment files
 .env
