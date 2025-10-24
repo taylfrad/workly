@@ -1,106 +1,82 @@
 # Firebase Configuration Setup
 
-To enable Google Sign-In functionality, you'll need to set up Firebase for your Flutter app.
+## Security Notice
 
-## Steps to Configure Firebase:
+This repository has been configured to prevent Firebase API keys from being committed to version control. The following files contain sensitive information and should NOT be committed:
 
-### 1. Create a Firebase Project
+- `lib/firebase_options.dart`
+- `android/app/google-services.json`
+- `ios/Runner/GoogleService-Info.plist`
 
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Click "Create a project" or "Add project"
-3. Follow the setup wizard
+## Setup Instructions
 
-### 2. Add Your App to Firebase
+### 1. Generate Firebase Configuration Files
 
-1. In the Firebase Console, click "Add app" and select Flutter
-2. Follow the setup instructions to add your app
-3. Download the configuration files:
-   - `google-services.json` for Android (place in `android/app/`)
-   - `GoogleService-Info.plist` for iOS (place in `ios/Runner/`)
+1. Go to the [Firebase Console](https://console.firebase.google.com/)
+2. Select your project: `workly-cbf7d`
+3. Generate new configuration files:
 
-### 3. Configure Web App (Required for Chrome testing)
+#### For Android:
 
-1. In Firebase Console, click "Add app" and select **Web** (</> icon)
-2. Register your web app with nickname "Workly Web"
-3. Copy the Firebase configuration object
-4. Update `web/index.html` with your actual Firebase config values:
-   ```javascript
-   const firebaseConfig = {
-     apiKey: "your-actual-api-key",
-     authDomain: "your-project-id.firebaseapp.com",
-     projectId: "your-project-id",
-     storageBucket: "your-project-id.appspot.com",
-     messagingSenderId: "your-sender-id",
-     appId: "your-app-id",
-   };
+1. Go to Project Settings > General > Your apps
+2. Select your Android app
+3. Download `google-services.json`
+4. Place it in `android/app/google-services.json`
+
+#### For iOS:
+
+1. Go to Project Settings > General > Your apps
+2. Select your iOS app
+3. Download `GoogleService-Info.plist`
+4. Place it in `ios/Runner/GoogleService-Info.plist`
+
+### 2. Generate Firebase Options Dart File
+
+1. Install FlutterFire CLI:
+
+   ```bash
+   dart pub global activate flutterfire_cli
    ```
 
-### 4. Enable Authentication
+2. Configure Firebase for your project:
 
-1. In Firebase Console, go to "Authentication" > "Sign-in method"
-2. Enable "Google" as a sign-in provider
-3. Add your app's SHA-1 fingerprint (for Android)
+   ```bash
+   flutterfire configure
+   ```
 
-### 4. Configure Google Sign-In
+3. This will generate `lib/firebase_options.dart` with your actual configuration
+
+### 3. Verify Setup
+
+After completing the setup, verify that:
+
+- All three files are present in your local project
+- None of these files appear in `git status` (they should be ignored)
+- Your app builds and connects to Firebase successfully
+
+## Important Security Notes
+
+- **Never commit** the actual configuration files to version control
+- **Rotate your API keys** immediately if they were previously exposed
+- Use the template file `lib/firebase_options_template.dart` as a reference
+- Consider using Firebase App Check for additional security
+
+## If API Keys Were Previously Exposed
+
+1. Go to Firebase Console > Project Settings > Service Accounts
+2. Generate new API keys
+3. Update your configuration files with the new keys
+4. Monitor your Firebase usage for any unauthorized access
+
+## Additional Security: Google OAuth Client ID
+
+The Google OAuth client ID in `lib/services/auth_service.dart` (line 14) should also be rotated:
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Select your Firebase project
-3. Enable the Google+ API
-4. Configure OAuth consent screen if needed
+2. Select your project: `workly-cbf7d`
+3. Navigate to APIs & Services > Credentials
+4. Find your OAuth 2.0 Client ID
+5. Generate a new client ID
+6. Update the `clientId` in `lib/services/auth_service.dart`
 
-### 5. Update Dependencies
-
-The required dependencies are already added to `pubspec.yaml`:
-
-```yaml
-dependencies:
-  firebase_core: ^3.6.0
-  firebase_auth: ^5.3.1
-  google_sign_in: ^6.2.1
-  provider: ^6.1.2
-```
-
-### 4. Configure Google Sign-In
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Select your Firebase project
-3. Enable the Google+ API
-4. Configure OAuth consent screen if needed
-
-### 5. Update Dependencies
-
-```bash
-flutter pub get
-flutter run
-```
-
-## Features Implemented:
-
-✅ **Google Sign-In**: Users can sign in with their Google account  
-✅ **Guest Mode**: Users can continue without signing in  
-✅ **User State Management**: Proper authentication state handling  
-✅ **Profile Persistence**: Signed-in users' profiles are saved  
-✅ **Sign Out**: Users can sign out from their account  
-✅ **Error Handling**: Proper error messages for failed authentication
-
-## User Flow:
-
-1. **Auth Screen**: Users see two options:
-
-   - "Sign in with Google" - Full account with saved progress
-   - "Continue as Guest" - Temporary session without saved progress
-
-2. **Profile Screen**:
-
-   - Guest users see a notice about limited functionality
-   - Signed-in users can sign out via the app bar
-   - Both can complete their profile and start swiping
-
-3. **Job Swipe Screen**: Both user types can swipe on jobs, but only signed-in users will have their preferences saved.
-
-## Notes:
-
-- Guest users get a unique temporary ID
-- Signed-in users get their Google profile information pre-filled
-- All authentication state is managed through the `AuthProvider`
-- The app handles authentication state changes automatically
+**Current exposed client ID:** `499488421543-dqpsq3vag3cus0hme6lohd7vj5cjes5i.apps.googleusercontent.com`
